@@ -8,8 +8,10 @@ pappi should also repel eachother, to stay a min distance
 
 */
 
+const globalMultiplier = 1.0;
+
 class Seed{
-  constructor(motherFlower,radius){
+  constructor(motherFlower,coordinate,radius){
 
     this.renderStyle = motherFlower.renderStyle;
     this.stemThickness = motherFlower.acheneTubeThickness;
@@ -23,9 +25,8 @@ class Seed{
     this.radius = radius;
 
     //pappus (tuft)
-    const theta = random(0,TWO_PI);
-    const phi = random(0,TWO_PI);
-    this.pappus = createVector(this.flowerRadius*sin(phi)*cos(theta),this.flowerRadius*sin(phi)*sin(theta),this.flowerRadius*cos(phi));
+    this.pappusAnchorPosition = coordinate.copy();
+    this.pappus = coordinate.copy();
     this.pVelocity = createVector(0,0,0);
     this.pAcceleration = createVector(0,0,0);
 
@@ -37,6 +38,7 @@ class Seed{
     this.attached = true;
     this.breakLimit = 0.03;
     this.tension = 0;
+    this.drag = 0.2;
   }
   render(geometry){
     colorMode(RGB);
@@ -84,8 +86,8 @@ class Seed{
     const topL = {x:min(this.pappus.x,this.achene.x),y:min(this.pappus.y,this.achene.y)};
     const bottomR = {x:max(this.pappus.x,this.achene.x),y:max(this.pappus.y,this.achene.y)};
     colorMode(HSB,100);
-    // stroke(map(this.pVelocity.mag(),0,10,0,100),100,100);
-    stroke(map(this.tension,0,this.breakLimit,100,0),100,100);
+    stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
+    // stroke(map(this.tension,0,this.breakLimit,100,0),100,100);
     noFill();
     rect(topL.x - gap + this.centerPosition.x,topL.y - gap + this.centerPosition.y,bottomR.x - topL.x + 2*gap,bottomR.y - topL.y + 2*gap);
 
@@ -96,12 +98,25 @@ class Seed{
     pointCanvas.begin();
     colorMode(HSB,100);
     push();
-    stroke(map(this.pVelocity.mag(),0,10,0,100),100,100);
+    stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
     translate(this.pappus.x + this.centerPosition.x,this.pappus.y + this.centerPosition.y,this.pappus.z + this.centerPosition.z);
     strokeWeight(0.1);
     point(0,0);
     pop();
     pointCanvas.end();
+  }
+  calcAngularDistance(v1,v2){
+    //get angular distance (geodesic)
+    const pA = v1.copy().normalize();
+    const pB = v2.copy().normalize();
+    //vector direction along the arc connecting the two points
+    let dir = pB.copy().sub(pA.copy().mult(pA.dot(pB)));
+    dir.normalize();
+
+    const angle = acos(constrain(pA.dot(pB),-1,1));
+    const surfaceDist = angle * this.flowerRadius;
+
+    return {distance:surfaceDist,direction:dir};
   }
   update(wind,otherSeeds){
     if(this.attached){
@@ -111,35 +126,39 @@ class Seed{
       const normalComponent = surfaceNormal.copy().mult(wind.dot(surfaceNormal));
       const tangentForce = p5.Vector.sub(wind, normalComponent);
       
-      this.pAcceleration = p5.Vector.add(this.pAcceleration,tangentForce.mult(0.1));
+      this.pAcceleration = p5.Vector.add(this.pAcceleration,tangentForce.mult(0.1*globalMultiplier));
 
       //let pappi repel one another
       for(let s of otherSeeds){
         if(s != this){
           //get angular distance (geodesic)
-          const pA = this.pappus.copy().normalize();
-          const pB = s.pappus.copy().normalize();
-          //vector direction along the arc connecting the two points
-          let dir = pB.copy().sub(pA.copy().mult(pA.dot(pB)));
-          dir.normalize();
-
-          const angle = acos(constrain(pA.dot(pB),-1,1));
-          const surfaceDist = angle * this.flowerRadius;
-
+          const angular = this.calcAngularDistance(this.pappus,s.pappus);
           //if they're too close
-          if(surfaceDist < this.radius){
-            let collisionAmount = this.radius - surfaceDist;
+          if(angular.distance < this.radius){
+            let collisionAmount = this.radius - angular.distance;
             let mag = collisionAmount/this.radius;
-            let repulsion = dir.mult(-mag*0.1);
+            let repulsion = angular.direction.mult(-mag*0.1*globalMultiplier);
             this.pAcceleration.add(repulsion);
           }
         }
       }
+      
+      //spring coupling from the pappus to its original 'anchor point' to simulate
+      //the stiffness of the seed stalk
+      //eg: trying to get the seeds not to slide all around the sphere of the flower
+      // const k_1 = 0.85;
+      // const damping_1 = 1;
+      // //direction isn't in a straight line, has to be along the surface of the sphere
+      // const angular = this.calcAngularDistance(this.pappus,this.pappusAnchorPosition);
+      // if(angular.distance != 0){
+      //   const force = angular.direction.mult(angular.distance * k_1 * damping_1);
+      //   this.aAcceleration.add(force);
+      // }
 
-      this.pAcceleration.mult(0.2);
+      this.pAcceleration.mult(this.drag);
 
-      // const random = createVector(2*noise(this.pappus.x*100)-1,2*noise(this.pappus.y*200)-1,2*noise(this.pappus.z*50)-1);
-      // random.mult(0.01);
+      // const random = createVector(noise(this.pappus.x)-0.5,noise(this.pappus.y)-0.5,noise(this.pappus.z)-0.5);
+      // random.mult(0.0001);
       // this.pAcceleration.add(random);
 
       this.pVelocity.x += this.pAcceleration.x;
@@ -172,8 +191,8 @@ class Seed{
     //detached, free-floating
     //achenes are 'dragged' by pappi, and achenes are also affected by gravity
     else{
-      const random = createVector(2*noise(this.pappus.x*100)-1,2*noise(this.pappus.y*200)-1,2*noise(this.pappus.z*50)-1);
-      random.mult(0.05);
+      const random = createVector(noise(this.pappus.x)-0.5,noise(this.pappus.y)-0.5,noise(this.pappus.z)-0.5);
+      random.mult(0.05*globalMultiplier);
       this.pAcceleration.add(random);
 
       //wind
@@ -188,12 +207,12 @@ class Seed{
           if(dist < this.radius){
             let collisionAmount = this.radius - dist;
             let mag = collisionAmount/this.radius;
-            let repulsion = p5.Vector.sub(s.pappus,this.pappus).mult(-mag*0.1);
+            let repulsion = p5.Vector.sub(s.pappus,this.pappus).mult(-mag*0.1*globalMultiplier);
             this.pAcceleration.add(repulsion);
           }
         }
       }
-      this.pAcceleration.mult(0.1);
+      this.pAcceleration.mult(this.drag);
 
       this.pVelocity.x += this.pAcceleration.x;
       this.pVelocity.y += this.pAcceleration.y;
@@ -212,12 +231,12 @@ class Seed{
       if(dist != 0){
         const stretch = dist - this.seedLength;
         const dir = delta.copy().normalize();
-        const force = dir.mult(stretch * k);
+        const force = dir.mult(stretch * k * globalMultiplier);
         
         this.aAcceleration.add(force);
       }
       //gravity to give the achene some heft
-      const gravity = createVector(0,0.9,0);
+      const gravity = createVector(0,0.9*globalMultiplier,0);
       this.aAcceleration.add(gravity);
       this.aVelocity.add(this.aAcceleration);
       this.aVelocity.mult(damping);
@@ -244,27 +263,62 @@ class Dandelion{
 
     this.renderStyle = 'model';
 
-    const avgSeedRadius = 4*PI*this.flowerRadius/this.seedCount;
-
-    this.seedGeometry = this.buildPappusGeometry(avgSeedRadius*4,12);
+    this.avgSeedRadius = 4*PI*this.flowerRadius/this.seedCount;
+    this.numberofPappusFilaments = 12;
+    this.pappusCamberAngle = TWO_PI/12;
+    this.seedGeometry = this.buildPappusGeometry();
     
-    for(let i = 0; i<this.seedCount; i++){
-      this.seeds.push(new Seed(this,avgSeedRadius*0.9));
-    }
+    this.placeSeeds('random');
+
     this.stem = [
       createVector(0,0,0),
       createVector(width/16,height/4,0),
       createVector(0,height/2,0)
     ];
   }
-  buildPappusGeometry(radius,segments){
-    const tiltAngle = TWO_PI/12;
-
+  placeSeeds(placement){
+    //evenly-spaced using the golden ratio
+    //probably more flower-accurate, but less visually interesting
+    if(placement == 'fibonacci'){
+      // https://extremelearning.com.au/evenly-distributing-points-on-a-sphere/?utm_source=chatgpt.com
+      /*
+      their python implementation: 
+        from numpy import arange, pi, sin, cos, arccos
+        n = 50
+        i = arange(0, n, dtype=float) + 0.5
+        phi = arccos(1 - 2*i/n)
+        goldenRatio = (1 + 5**0.5)/2
+        theta = 2 pi * i / goldenRatio
+        x, y, z = cos(theta) * sin(phi), sin(theta) * sin(phi), cos(phi);
+      */
+      const goldenRatio = (1 + sqrt(5))/2;
+      const randAngle = TWO_PI/128;
+      for(let i = 0; i<this.seedCount; i++){
+        const phi = acos(1 - 2*i/this.seedCount) + random(-randAngle,randAngle);
+        const theta = TWO_PI * i/goldenRatio + random(-randAngle,randAngle);
+        const x = cos(theta) * sin(phi);
+        const y = sin(theta) * sin(phi);
+        const z = cos(phi);
+        const coordinate = createVector(x*this.flowerRadius,y*this.flowerRadius,z*this.flowerRadius);
+        this.seeds.push(new Seed(this,coordinate,this.avgSeedRadius*0.9));
+      }
+    }
+    else if(placement == 'random'){
+      for(let i = 0; i<this.seedCount; i++){
+        const theta = random(0,TWO_PI);
+        const phi = random(0,TWO_PI);
+        const coordinate = createVector(this.flowerRadius*sin(phi)*cos(theta),this.flowerRadius*sin(phi)*sin(theta),this.flowerRadius*cos(phi));
+        this.seeds.push(new Seed(this,coordinate,this.avgSeedRadius*0.9));
+      }
+    }
+  }
+  buildPappusGeometry(){
+    const radius = this.avgSeedRadius*4;
     let geometry = new p5.Geometry();
 
-    for(let i = 0; i<segments; i++){
+    for(let i = 0; i<this.numberofPappusFilaments; i++){
       //angle/position of each filament
-      const a = i/segments*TWO_PI;
+      const a = i/this.numberofPappusFilaments*TWO_PI;
       const y = cos(a) * radius;
       const z = sin(a) * radius;
 
@@ -274,13 +328,13 @@ class Dandelion{
 
       const v = geometry.vertices.length;
       const lengthVariation = random(-radius/2,radius/2);
-      const angleVariation = random(-tiltAngle/2,tiltAngle/2);
+      const angleVariation = random(-this.pappusCamberAngle/2,this.pappusCamberAngle/2);
       //skinny quad, instead of a line to work w p5js
       geometry.vertices.push(
         createVector(0,  nY,  nZ),
         createVector(0, -nY, -nZ),
-        createVector(-sin(tiltAngle+angleVariation)*(radius+lengthVariation), y - nY, z - nZ),
-        createVector(-sin(tiltAngle+angleVariation)*(radius+lengthVariation), y + nY, z + nZ)
+        createVector(-sin(this.pappusCamberAngle+angleVariation)*(radius+lengthVariation), y - nY, z - nZ),
+        createVector(-sin(this.pappusCamberAngle+angleVariation)*(radius+lengthVariation), y + nY, z + nZ)
       );
 
       // two triangles making up each quad
@@ -301,23 +355,24 @@ class Dandelion{
     pop();
   }
   renderToPointCanvas(){
-    pointCanvas.begin();
-    clear();
-    pointCanvas.end();
+    // pointCanvas.begin();
+    // clear();
+    // pointCanvas.end();
 
     for(let s of this.seeds){
       s.renderPoints();
+      // s.renderBoundingBoxes();
     }
 
   }
   update(){
     let wind = createVector(0,0,0);
-      if(mouseIsPressed){
+      if(mouseIsPressed && !(keyIsDown(SHIFT) || touches.length > 1)){
         wind = createVector(mouseX-width/2-this.centerPosition.x,mouseY-height/2-this.centerPosition.y,0);
         this.currentWind.add(wind).mult(0.0001);
       }
       else{
-        this.currentWind.mult(0.6);
+        this.currentWind.mult(0.2);
       }
     for(let s of this.seeds){
       s.update(this.currentWind,this.seeds);
