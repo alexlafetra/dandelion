@@ -2,7 +2,16 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+  <!-- disable user zoom -->
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /> -->
+  <!--
+  Source - https://stackoverflow.com/a/64557120
+  Posted by Aarivex
+  Retrieved 2026-02-16, License - CC BY-SA 4.0
+  -->
+
+  <meta name="viewport" content="initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, width=device-width, height=device-height, target-densitydpi=device-dpi">
 
   <!-- PLEASE NO CHANGES BELOW THIS LINE (UNTIL I SAY SO) -->
   <script language="javascript" type="text/javascript" src="libraries/p5.min.js"></script>
@@ -13,6 +22,10 @@
   <!-- OK, YOU CAN MAKE CHANGES BELOW THIS LINE AGAIN -->
 
   <style>
+    :root {
+      touch-action: pan-x pan-y;
+      height: 100% 
+    }
     html{
       height:100%;
       overflow:hidden;
@@ -20,6 +33,7 @@
       background-color: blue;
       user-select: none;
       pointer-events: none;
+      touch-action: none;
       /* cursor:none; */
     }
     body {

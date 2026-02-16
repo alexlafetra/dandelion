@@ -9,7 +9,7 @@ function setup(){
     //to use screenbuffer, make sure w/h match the device ur sending it to
     // screenBuffer = new ScreenBuffer(width,height);
 
-    // pointCanvas = createFramebuffer({depth:false,antialias:true,textureFiltering:NEAREST});
+    // pointCanvas = createFramebuffer({width:width/4,height:height/4,depth:false,antialias:true,textureFiltering:NEAREST});
 
     dandelion = new Dandelion();
     pixelDensity(0.5);
@@ -19,8 +19,10 @@ function setup(){
 }
 
 function draw(){
-    if(keyIsDown(SHIFT) || touches.length > 1)
-        orbitControl();
+
+    // if(keyIsDown(SHIFT) || touches.length > 1)
+    //     orbitControl();
+
     clear();
     dandelion.update();
     dandelion.render();

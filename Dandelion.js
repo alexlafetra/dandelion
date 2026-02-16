@@ -81,28 +81,26 @@ class Seed{
   //draw a bounding box roughly around the pappus & achene
   renderBoundingBoxes(){
     pointCanvas.begin();
+    scale(pointCanvas.width/width);
     strokeWeight(1);
-    const gap = 10;
-    const topL = {x:min(this.pappus.x,this.achene.x),y:min(this.pappus.y,this.achene.y)};
-    const bottomR = {x:max(this.pappus.x,this.achene.x),y:max(this.pappus.y,this.achene.y)};
     colorMode(HSB,100);
     stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
     // stroke(map(this.tension,0,this.breakLimit,100,0),100,100);
     noFill();
+    const gap = 10;
+    const topL = {x:min(this.pappus.x,this.achene.x),y:min(this.pappus.y,this.achene.y)};
+    const bottomR = {x:max(this.pappus.x,this.achene.x),y:max(this.pappus.y,this.achene.y)};
     rect(topL.x - gap + this.centerPosition.x,topL.y - gap + this.centerPosition.y,bottomR.x - topL.x + 2*gap,bottomR.y - topL.y + 2*gap);
-
     pointCanvas.end();
   }
   //draw a point at each pappus
   renderPoints(){
     pointCanvas.begin();
+    scale(pointCanvas.width/width);
     colorMode(HSB,100);
-    push();
     stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
-    translate(this.pappus.x + this.centerPosition.x,this.pappus.y + this.centerPosition.y,this.pappus.z + this.centerPosition.z);
     strokeWeight(0.1);
-    point(0,0);
-    pop();
+    point(this.pappus.x + this.centerPosition.x,this.pappus.y + this.centerPosition.y);
     pointCanvas.end();
   }
   calcAngularDistance(v1,v2){
@@ -367,7 +365,8 @@ class Dandelion{
   }
   update(){
     let wind = createVector(0,0,0);
-      if(mouseIsPressed && !(keyIsDown(SHIFT) || touches.length > 1)){
+      // if(mouseIsPressed && !(keyIsDown(SHIFT) || touches.length > 1)){
+      if(mouseIsPressed){
         wind = createVector(mouseX-width/2-this.centerPosition.x,mouseY-height/2-this.centerPosition.y,0);
         this.currentWind.add(wind).mult(0.0001);
       }
