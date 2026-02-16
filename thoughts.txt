@@ -1,0 +1,9 @@
+i actually prefer the 'point' style of rendering the pappi on the oleds/at low resolution. it's less noise, and also has a more delicate/cartoonish feel.
+
+Trying to implement a grayscale/transparency mode. My first idea is to just send each frame 3 times, including opaque bytes each time and transparent/gray bites less.
+
+okay, grayscale didn't work very well and didn't add much
+
+i like the videos of me dragging the mouse, it's like the physical act of making a wish is reduced to dragging the mouse
+
+gonna do a blow-website
