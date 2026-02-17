@@ -21,7 +21,7 @@ function setup(){
     };
 
     //creating canvas to fit window
-    canvas = createCanvas(min(windowWidth,1000),min(windowHeight,1000),WEBGL);
+    canvas = createCanvas(windowWidth,windowHeight,WEBGL);
     canvas.mousePressed(requestAudioAndGyroAccess);
 
     if(settings.interaction == 'blow'){
@@ -47,8 +47,8 @@ function draw(){
 
 
 async function requestAudioAndGyroAccess(){
+    userStartAudio();
     if(settings.interaction == 'blow' && !microphone.enabled){
-        userStartAudio();
         microphone.start();
         console.log('starting mic input!');
     }

@@ -283,7 +283,7 @@ class Dandelion{
     //blowing/touching
     this.interaction = settings.interaction;
     if(this.interaction == 'blow'){
-      globalMultiplier = 5.0;
+      globalMultiplier = 4.0;
       this.breakLimit = 0.01;
     }
     else if(this.interaction == 'touch'){
@@ -421,7 +421,7 @@ class Dandelion{
       if(microphone.enabled){
         micLevel = (microphone.getLevel(1.0) + micLevel)/2;
         // console.log(micLevel);
-        let randomAngle = PI * (noise(frameCount/50) - 0.5) - HALF_PI;
+        let randomAngle = HALF_PI * (noise(frameCount/50) - 0.5) - HALF_PI;
         if(micLevel > backgroundNoiseThreshold){
           let wind = createVector(0,-(micLevel-backgroundNoiseThreshold),0);
           wind.setHeading(randomAngle);
