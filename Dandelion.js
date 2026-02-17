@@ -8,7 +8,7 @@ pappi should also repel eachother, to stay a min distance
 
 */
 
-const globalMultiplier = 1.0;
+let globalMultiplier = 5.0;
 
 class Seed{
   constructor(motherFlower,coordinate,radius){
@@ -39,7 +39,7 @@ class Seed{
     this.aAcceleration = createVector(0,0,0);
 
     this.attached = true;
-    this.breakLimit = 0.03;
+    this.breakLimit = this.motherFlower.breakLimit + random(-2*this.motherFlower.breakLimit/3,2*this.motherFlower.breakLimit/3);
     this.tension = 0;
     this.drag = 0.2;
   }
@@ -56,18 +56,19 @@ class Seed{
     }
     else{
       colorMode(RGB);
+      const c = map(this.tension/this.breakLimit,0,1,255,0);
       //red
       if(this.highlightColor == 'white')
         fillColor = 255;
       //blue
       else if(this.highlightColor == 'blue')
-        fillColor = [map(this.tension,0,this.breakLimit,255,0),map(this.tension,0,this.breakLimit,255,0),255];
+        fillColor = [c,c,255];
       //green
       else if(this.highlightColor == 'green')
-        fillColor = [map(this.tension,0,this.breakLimit,255,0),255,map(this.tension,0,this.breakLimit,255,0)];
+        fillColor = [c,255,c];
       //red (default)
       else
-        fillColor = [255,map(this.tension,0,this.breakLimit,255,0),map(this.tension,0,this.breakLimit,255,0)];
+        fillColor = [255,c,c];
     }
     noFill();
     strokeWeight(this.stemThickness);
@@ -177,6 +178,9 @@ class Seed{
       //   this.aAcceleration.add(force);
       // }
 
+      const tilt = createVector(rotationY,rotationX,rotationZ).limit(this.breakLimit*0.9);
+      this.pAcceleration.add(tilt);
+
       this.pAcceleration.mult(this.drag);
 
       // const random = createVector(noise(this.pappus.x)-0.5,noise(this.pappus.y)-0.5,noise(this.pappus.z)-0.5);
@@ -195,6 +199,7 @@ class Seed{
       //should this be perpendicular force, instead of inline force? or both?
       const stemDirection = p5.Vector.sub(this.pappus, this.achene).normalize();
       this.tension = wind.dot(stemDirection);
+      // if(abs(this.tension) > this.breakLimit)
       if(this.tension > this.breakLimit)
         this.attached = false;
 
@@ -234,6 +239,9 @@ class Seed{
           }
         }
       }
+      // const tilt = createVector(rotationY,rotationX,rotationZ).limit(0.1);
+      // this.pAcceleration.add(tilt);
+
       this.pAcceleration.mult(this.drag);
 
       this.pVelocity.x += this.pAcceleration.x;
@@ -246,7 +254,7 @@ class Seed{
 
       //simple hooke's law spring coupling to pull achene along with the pappus
       //spring stiffness
-      const k = 0.8;
+      const k = 0.85;
       const damping = 0.01;
       const delta = p5.Vector.sub(this.pappus,this.achene);
       const dist = delta.mag();
@@ -272,6 +280,17 @@ class Seed{
 class Dandelion{
   constructor(settings){
 
+    //blowing/touching
+    this.interaction = settings.interaction;
+    if(this.interaction == 'blow'){
+      globalMultiplier = 5.0;
+      this.breakLimit = 0.01;
+    }
+    else if(this.interaction == 'touch'){
+      globalMultiplier = 2.0;
+      this.breakLimit = 0.03;
+    }
+
     //visual settings for rendering data differently
     this.drawPoints = settings.drawPoints;
     this.drawBoundingBoxes = settings.drawBoundingBoxes;
@@ -281,7 +300,7 @@ class Dandelion{
       this.pointCanvas = createFramebuffer({width:width/4,height:height/4,depth:false,antialias:true,textureFiltering:NEAREST});
     }
 
-    //globl wind
+    //global wind
     this.currentWind = createVector(0,0,0);
 
     this.seeds = [];
@@ -375,12 +394,6 @@ class Dandelion{
   }
 
   render(){
-    push();
-    translate(this.centerPosition.x,this.centerPosition.y,this.centerPosition.z);
-    for(let s of this.seeds){
-      s.render(this.seedGeometry);
-    }
-    pop();
     if(this.drawBoundingBoxes){
       this.pointCanvas.begin();
       clear();
@@ -396,17 +409,41 @@ class Dandelion{
       }
       image(this.pointCanvas,-width/2,-height/2,width,height);
     }
+    push();
+    translate(this.centerPosition.x,this.centerPosition.y,this.centerPosition.z);
+    for(let s of this.seeds){
+      s.render(this.seedGeometry);
+    }
+    pop();
   }
   update(){
-    let wind = createVector(0,0,0);
-      // if(mouseIsPressed && !(keyIsDown(SHIFT) || touches.length > 1)){
+    if(this.interaction == 'blow'){
+      if(microphone.enabled){
+        micLevel = (microphone.getLevel(1.0) + micLevel)/2;
+        // console.log(micLevel);
+        let randomAngle = PI * (noise(frameCount/50) - 0.5) - HALF_PI;
+        if(micLevel > backgroundNoiseThreshold){
+          let wind = createVector(0,-(micLevel-backgroundNoiseThreshold),0);
+          wind.setHeading(randomAngle);
+          this.currentWind.add(wind).mult(0.5);
+        }
+        else{
+          this.currentWind.setHeading(randomAngle);
+        }
+      }
+    }
+    if(this.interaction == 'touch'){
       if(mouseIsPressed){
-        wind = createVector(mouseX-width/2-this.centerPosition.x,mouseY-height/2-this.centerPosition.y,0);
+        let randomAngle = HALF_PI * (noise(frameCount/50) - 0.5);
+        let wind = createVector(mouseX-width/2-this.centerPosition.x,mouseY-height/2-this.centerPosition.y,0);
+        wind.rotate(randomAngle);
         this.currentWind.add(wind).mult(0.0001);
       }
       else{
         this.currentWind.mult(0.8);
       }
+    }
+
     for(let s of this.seeds){
       s.update(this.currentWind,this.seeds);
     }

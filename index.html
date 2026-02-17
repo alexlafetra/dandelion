@@ -5,45 +5,42 @@
   <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
   <!-- disable user zoom -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>dandelion</title>
+  <link rel="icon" type="image/x-icon" href="dandelion.png">
 
-
-  <!-- PLEASE NO CHANGES BELOW THIS LINE (UNTIL I SAY SO) -->
   <script language="javascript" type="text/javascript" src="libraries/p5.min.js"></script>
+  <script language="javascript" type="text/javascript" src="libraries/p5.sound.min.js"></script>
   <script language="javascript" type="text/javascript" src="libraries/p5.webserial.js"></script>
   <script language="javascript" type="text/javascript" src="Dandelion.js"></script>
   <script language="javascript" type="text/javascript" src="ScreenBuffer.js"></script>
   <script language="javascript" type="text/javascript" src="main.js"></script>
-  <!-- OK, YOU CAN MAKE CHANGES BELOW THIS LINE AGAIN -->
 
   <style>
     :root {
-      touch-action: pan-x pan-y;
-      height: 100% 
+      /* touch-action: pan-x pan-y; */
+      height: 100vmax; 
+      user-select: none;
+      touch-action: none;
     }
     html{
       height:100%;
       overflow:hidden;
       image-rendering: pixelated;
       background-color: blue;
+      overflow: hidden;
       user-select: none;
-      pointer-events: none;
-      touch-action: none;
-      /* cursor:none; */
     }
     body {
       height:100%;
       padding: 0;
       margin: 0;
-      display:flex;
+      /* display:flex;
       justify-content: center;
-      align-items: center;
+      align-items: center; */
     }
-    canvas{
-
-      /* border:1px solid black; */
-      /* cursor:none; */
+    canvas {
+      touch-action: none;
     }
-
   </style>
 </head>
 
