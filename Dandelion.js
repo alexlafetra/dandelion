@@ -13,9 +13,12 @@ const globalMultiplier = 1.0;
 class Seed{
   constructor(motherFlower,coordinate,radius){
 
+    this.motherFlower = motherFlower;
+
     this.renderStyle = motherFlower.renderStyle;
     this.stemThickness = motherFlower.acheneTubeThickness;
     this.centerPosition = motherFlower.centerPosition;
+    this.highlightColor = motherFlower.highlightColor;
     
     //stem length
     this.flowerRadius = motherFlower.flowerRadius;
@@ -41,10 +44,31 @@ class Seed{
     this.drag = 0.2;
   }
   render(geometry){
-    colorMode(RGB);
-    // const fillColor = [255,map(this.tension,0,this.breakLimit,0,255),map(this.tension,0,this.breakLimit,0,255)];
-    const fillColor = [255,map(this.tension,0,this.breakLimit,255,0),map(this.tension,0,this.breakLimit,255,0)];
-    // const fillColor = 255;
+
+    let fillColor;
+    if(this.highlightColor == 'velocity'){
+      colorMode(HSB,100);
+      fillColor = [map(this.pVelocity.mag(),0,6,0,100),100,100];
+    }
+    else if(this.highlightColor == 'acceleration'){
+      colorMode(HSB,100);
+      fillColor = [map(this.pAcceleration.mag(),0,0.05,0,100),100,100];
+    }
+    else{
+      colorMode(RGB);
+      //red
+      if(this.highlightColor == 'white')
+        fillColor = 255;
+      //blue
+      else if(this.highlightColor == 'blue')
+        fillColor = [map(this.tension,0,this.breakLimit,255,0),map(this.tension,0,this.breakLimit,255,0),255];
+      //green
+      else if(this.highlightColor == 'green')
+        fillColor = [map(this.tension,0,this.breakLimit,255,0),255,map(this.tension,0,this.breakLimit,255,0)];
+      //red (default)
+      else
+        fillColor = [255,map(this.tension,0,this.breakLimit,255,0),map(this.tension,0,this.breakLimit,255,0)];
+    }
     noFill();
     strokeWeight(this.stemThickness);
     stroke(fillColor);
@@ -80,9 +104,9 @@ class Seed{
   }
   //draw a bounding box roughly around the pappus & achene
   renderBoundingBoxes(){
-    pointCanvas.begin();
-    scale(pointCanvas.width/width);
-    strokeWeight(1);
+    this.motherFlower.pointCanvas.begin();
+    scale(this.motherFlower.pointCanvas.width/canvas.width);
+    strokeWeight(map(this.pAcceleration.mag(),0,this.breakLimit,0,1));
     colorMode(HSB,100);
     stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
     // stroke(map(this.tension,0,this.breakLimit,100,0),100,100);
@@ -91,17 +115,17 @@ class Seed{
     const topL = {x:min(this.pappus.x,this.achene.x),y:min(this.pappus.y,this.achene.y)};
     const bottomR = {x:max(this.pappus.x,this.achene.x),y:max(this.pappus.y,this.achene.y)};
     rect(topL.x - gap + this.centerPosition.x,topL.y - gap + this.centerPosition.y,bottomR.x - topL.x + 2*gap,bottomR.y - topL.y + 2*gap);
-    pointCanvas.end();
+    this.motherFlower.pointCanvas.end();
   }
   //draw a point at each pappus
   renderPoints(){
-    pointCanvas.begin();
-    scale(pointCanvas.width/width);
+    this.motherFlower.pointCanvas.begin();
+    scale(this.motherFlower.pointCanvas.width/canvas.width);
     colorMode(HSB,100);
     stroke(map(this.pVelocity.mag(),0,5,0,100),100,100);
     strokeWeight(0.1);
     point(this.pappus.x + this.centerPosition.x,this.pappus.y + this.centerPosition.y);
-    pointCanvas.end();
+    this.motherFlower.pointCanvas.end();
   }
   calcAngularDistance(v1,v2){
     //get angular distance (geodesic)
@@ -246,7 +270,18 @@ class Seed{
 
 
 class Dandelion{
-  constructor(){
+  constructor(settings){
+
+    //visual settings for rendering data differently
+    this.drawPoints = settings.drawPoints;
+    this.drawBoundingBoxes = settings.drawBoundingBoxes;
+    this.highlightColor = settings.highlightColor;
+
+    if(this.drawPoints || this.drawBoundingBoxes){
+      this.pointCanvas = createFramebuffer({width:width/4,height:height/4,depth:false,antialias:true,textureFiltering:NEAREST});
+    }
+
+    //globl wind
     this.currentWind = createVector(0,0,0);
 
     this.seeds = [];
@@ -267,12 +302,6 @@ class Dandelion{
     this.seedGeometry = this.buildPappusGeometry();
     
     this.placeSeeds('random');
-
-    this.stem = [
-      createVector(0,0,0),
-      createVector(width/16,height/4,0),
-      createVector(0,height/2,0)
-    ];
   }
   placeSeeds(placement){
     //evenly-spaced using the golden ratio
@@ -301,6 +330,7 @@ class Dandelion{
         this.seeds.push(new Seed(this,coordinate,this.avgSeedRadius*0.9));
       }
     }
+    //randomly scattering seeds
     else if(placement == 'random'){
       for(let i = 0; i<this.seedCount; i++){
         const theta = random(0,TWO_PI);
@@ -351,17 +381,21 @@ class Dandelion{
       s.render(this.seedGeometry);
     }
     pop();
-  }
-  renderToPointCanvas(){
-    // pointCanvas.begin();
-    // clear();
-    // pointCanvas.end();
-
-    for(let s of this.seeds){
-      s.renderPoints();
-      // s.renderBoundingBoxes();
+    if(this.drawBoundingBoxes){
+      this.pointCanvas.begin();
+      clear();
+      this.pointCanvas.end();
+      for(let s of this.seeds){
+        s.renderBoundingBoxes();
+      }
+      image(this.pointCanvas,-width/2,-height/2,width,height);
     }
-
+    else if(this.drawPoints){
+      for(let s of this.seeds){
+        s.renderPoints();
+      }
+      image(this.pointCanvas,-width/2,-height/2,width,height);
+    }
   }
   update(){
     let wind = createVector(0,0,0);
@@ -371,7 +405,7 @@ class Dandelion{
         this.currentWind.add(wind).mult(0.0001);
       }
       else{
-        this.currentWind.mult(0.2);
+        this.currentWind.mult(0.8);
       }
     for(let s of this.seeds){
       s.update(this.currentWind,this.seeds);
