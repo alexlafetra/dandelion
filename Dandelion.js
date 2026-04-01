@@ -41,7 +41,7 @@ class Seed{
     this.attached = true;
     this.breakLimit = this.motherFlower.breakLimit + random(-2*this.motherFlower.breakLimit/3,2*this.motherFlower.breakLimit/3);
     this.tension = 0;
-    this.drag = 0.2;
+    this.drag = 0.5;
   }
   render(geometry){
 

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Adafruit_TinyUSB.h>
 #include <Wire.h>
+#include "Dandelion.h"
 
 #undef CFG_TUH_RPI_PIO_USB
 #define CFG_TUH_RPI_PIO_USB 1
@@ -68,11 +69,16 @@ class USBSerialCaptureCard: public Adafruit_SSD1306{
     }
 };
 
-USBSerialCaptureCard display(SCREEN_WIDTH, SCREEN_HEIGHT,
-  &SPI1, OLED_DC, OLED_RESET, OLED_CS);
+// USBSerialCaptureCard display(SCREEN_WIDTH, SCREEN_HEIGHT,
+//   &SPI1, OLED_DC, OLED_RESET, OLED_CS);
 // USBSerialCaptureCard display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#include "graphics/fonts/small.cpp"
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
+  &SPI1, OLED_DC, OLED_RESET, OLED_CS);
+
+// #include "graphics/fonts/small.cpp"
+
+Dandelion* dandelion = nullptr;
 
 //CPU 0 Setup
 void setup() {
@@ -94,37 +100,52 @@ void setup() {
   SPI1.setSCK(SPI1_SCK);
   SPI1.begin();
 
-  display.init();
+  //start display
+  display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDR);
+  //Set the display rotation (which is ~technically~ upside down)
+  display.setRotation(DISPLAY_UPRIGHT);
+  //turn text wrapping off, so our menus look ok
+  display.setTextWrap(false);
+  display.setTextColor(SSD1306_WHITE);
   display.clearDisplay();
 
+  dandelion = new Dandelion();
+
   //wait for tinyUSB to connect, if the USB port is connected (not sure if this is necessary, need to test)
-  while (!TinyUSBDevice.mounted()) {
-    delay(1);
-  }
+  // while (!TinyUSBDevice.mounted()) {
+  //   delay(1);
+  // }
 
-  //seeding random number generator
-  srand(1);
+  // //seeding random number generator
+  // srand(1);
 
-  Serial.setTimeout(1); // VERY important
+  // Serial.setTimeout(1); // VERY important
 
-  Serial.write(255);
+  // Serial.write(255);
 }
 
 
 //this cpu handles time-sensitive things
 void loop(){
-  if (!Serial) {
-    display.clearDisplay();
-    printSmall(0, 0, "Waiting for USB...", 1);
-    display.display();
-  }
-  else{
-    size_t readSize = Serial.readBytes(display.getBuffer(),1024);
-    if (readSize == 1024) {
-      // full frame received safely
-      display.display();
-      //tell laptop you're ready for the next frame
-      // Serial.write(255);
-    }
-  }
+  Serial.println("hi");
+  dandelion->update();
+  display.clearDisplay();
+  dandelion->render();
+  display.display();
+
+
+  // if (!Serial) {
+  //   display.clearDisplay();
+  //   printSmall(0, 0, "Waiting for USB...", 1);
+  //   display.display();
+  // }
+  // else{
+  //   size_t readSize = Serial.readBytes(display.getBuffer(),1024);
+  //   if (readSize == 1024) {
+  //     // full frame received safely
+  //     display.display();
+  //     //tell laptop you're ready for the next frame
+  //     // Serial.write(255);
+  //   }
+  // }
 }
